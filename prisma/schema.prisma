@@ -1,0 +1,183 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Employee {
+  id            Int      @id @default(autoincrement())
+  employee_name String
+  post_id       Int
+  department_id Int
+  dismissed     Boolean
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  post       Post        @relation(fields: [post_id], references: [id])
+  department Department  @relation(fields: [department_id], references: [id])
+  user       User?
+  orders     Order[]     @relation("EmployeeOrders")
+  routeSteps RouteStep[]
+
+  @@index([post_id])
+  @@index([department_id])
+}
+
+model Post {
+  id         Int        @id @default(autoincrement())
+  post_name  String
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+  employees  Employee[]
+}
+
+model Department {
+  id              Int        @id @default(autoincrement())
+  department_name String
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
+  employees       Employee[]
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  user_name   String   @unique
+  employee_id Int      @unique
+  password    String
+  role_id     Int
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  employee Employee  @relation(fields: [employee_id], references: [id])
+  role     Role      @relation(fields: [role_id], references: [id])
+  orders   Order[]   @relation("UserOrders")
+  cashLogs CashLog[]
+
+  @@index([role_id])
+}
+
+model Role {
+  id         Int      @id @default(autoincrement())
+  role_name  String   @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  users      User[]
+}
+
+model Order {
+  id                    Int      @id @default(autoincrement())
+  employee_id           Int
+  user_id               Int
+  order_description     String
+  order_summ            Float
+  route_id              Int
+  status_id             Int
+  order_note            String?
+  current_route_step_id Int?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  employee  Employee     @relation("EmployeeOrders", fields: [employee_id], references: [id])
+  user      User         @relation("UserOrders", fields: [user_id], references: [id])
+  route     Route        @relation(fields: [route_id], references: [id])
+  status    Status       @relation(fields: [status_id], references: [id])
+  routeStep RouteStep?   @relation(fields: [current_route_step_id], references: [id])
+  images    OrderImage[]
+  cashLogs  CashLog[]
+
+  @@index([employee_id])
+  @@index([user_id])
+  @@index([route_id])
+  @@index([status_id])
+}
+
+model OrderImage {
+  id         Int      @id @default(autoincrement())
+  order_id   Int
+  image_src  String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  order Order @relation(fields: [order_id], references: [id])
+
+  @@index([order_id])
+}
+
+model Cash {
+  id         Int      @id @default(autoincrement())
+  cash_name  String
+  cash_summ  Float
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  logs CashLog[]
+}
+
+model CashLog {
+  id         Int      @id @default(autoincrement())
+  cash_id    Int
+  order_id   Int?
+  user_id    Int // Новый столбец для хранения ID пользователя
+  action     String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  cash  Cash   @relation(fields: [cash_id], references: [id])
+  order Order? @relation(fields: [order_id], references: [id])
+  user  User   @relation(fields: [user_id], references: [id]) // Связь с пользователем
+
+  @@index([cash_id])
+  @@index([order_id])
+  @@index([user_id]) // Индекс по user_id
+}
+
+model Route {
+  id         Int         @id @default(autoincrement())
+  route_name String
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
+  steps      RouteStep[]
+  orders     Order[]
+}
+
+model RouteStep {
+  id                   Int      @id @default(autoincrement())
+  route_id             Int
+  step_number          Int
+  employee_id          Int
+  step_number_agreed   Int
+  step_number_rejected Int
+  status_id_agreed     Int
+  status_id_rejected   Int
+  isWithdraw           Boolean  @default(false) // Новое поле
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  route          Route    @relation(fields: [route_id], references: [id])
+  employee       Employee @relation(fields: [employee_id], references: [id])
+  statusAgreed   Status   @relation("AgreedStatus", fields: [status_id_agreed], references: [id])
+  statusRejected Status   @relation("RejectedStatus", fields: [status_id_rejected], references: [id])
+  order          Order[]
+
+  @@index([route_id])
+  @@index([employee_id])
+}
+
+model Status {
+  id            Int         @id @default(autoincrement())
+  status_name   String
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @updatedAt
+  orders        Order[]
+  agreedSteps   RouteStep[] @relation("AgreedStatus")
+  rejectedSteps RouteStep[] @relation("RejectedStatus")
+}
