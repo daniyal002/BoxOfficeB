@@ -65,13 +65,7 @@ model User {
   @@index([role_id])
 }
 
-model Role {
-  id         Int      @id @default(autoincrement())
-  role_name  String   @unique
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  users      User[]
-}
+
 
 model Order {
   id                    Int      @id @default(autoincrement())
@@ -181,3 +175,38 @@ model Status {
   agreedSteps   RouteStep[] @relation("AgreedStatus")
   rejectedSteps RouteStep[] @relation("RejectedStatus")
 }
+
+model Role {
+  id         Int      @id @default(autoincrement())
+  role_name  String   @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  users      User[]
+  menus      Menu[] 
+  menuRoles  MenuRole[] // Добавляем обратное отношение
+
+}
+
+model Menu {
+  id         Int        @id @default(autoincrement())
+  label      String
+  path       String
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+
+  roles      Role[]
+  menuRoles  MenuRole[] // Добавляем обратное отношение
+}
+
+model MenuRole {
+  menu_id Int
+  role_id Int
+
+  menu Menu @relation(fields: [menu_id], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@id([menu_id, role_id])
+  @@index([role_id])
+  @@index([menu_id])
+}
+

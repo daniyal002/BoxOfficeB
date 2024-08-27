@@ -235,6 +235,7 @@ router.post("/:id/agreed", async (req, res) => {
   const { id } = req.params;
 
   try {
+    let updateOrder;
     const order = await prisma.order.findUnique({
       where: { id: Number(id) },
       include: { route: { include: { steps: true } } },
@@ -244,49 +245,58 @@ router.post("/:id/agreed", async (req, res) => {
       return res.status(404).json({ error: "Зявка не найдена" });
     }
 
-    if (order.current_route_step_id === FINISHED_STEP_ID) {
-      return res
-        .status(500)
-        .json({ error: "Заявка была завершена, не возможно ее согласовать !" });
-    }
+    // if (order.current_route_step_id === FINISHED_STEP_ID) {
+    //   return res
+    //     .status(500)
+    //     .json({ error: "Заявка была завершена, не возможно ее согласовать !" });
+    // }
 
-    // const currentStep = order.route.steps.find(step => step.step_number === order.status_id);
     const currentStep = order.route.steps.find(
       (step) => step.id === order.current_route_step_id
     );
+    if (currentStep === null || currentStep === undefined) {
+      let initialStepId: number | undefined;
 
-    if (!currentStep) {
       const minNumber = findMinValue(order.route.steps, "step_number");
-      await prisma.order.update({
+      const initialStep = order.route.steps.find(step => step.step_number === minNumber);
+      if (initialStep) {
+        initialStepId = initialStep.id;  // Устанавливаем id шага
+      }
+      updateOrder = await prisma.order.update({
         where: { id: order.id },
         data: {
-          current_route_step_id: minNumber,
+          current_route_step_id: initialStepId,
+          status_id:1,
         },
+        include:{employee:true,status:true,images:true,route:true}
       });
     } else {
       let nextStepNumber = currentStep?.step_number_agreed;
       let nextStepStatus = currentStep?.status_id_agreed;
-      if(nextStepNumber == 0 || nextStepNumber === undefined){
-        console.log(nextStepNumber)
-        await prisma.order.update({
+      if(nextStepNumber == 0 || nextStepNumber === null){
+        updateOrder =  await prisma.order.update({
           where: { id: order.id },
           data: {
             current_route_step_id: FINISHED_STEP_ID,
             status_id: nextStepStatus,
           },
+          include:{employee:true,status:true,images:true,route:true}
+        });
+      }else{
+        let stepId = order.route.steps.find(step => step.step_number === nextStepNumber)
+
+        updateOrder = await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            current_route_step_id: stepId?.id,
+            status_id: nextStepStatus,
+          },
+          include:{employee:true,status:true,images:true,route:true}
         });
       }
-      let stepId = order.route.steps.find(step => step.step_number === nextStepNumber)
-
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          current_route_step_id: stepId?.id,
-          status_id: nextStepStatus,
-        },
-      });
     }
-    res.json({ message: "Заявка перешла на следующий шаг" });
+    console.log(updateOrder)
+    res.json(updateOrder);
   } catch (error) {
     res
       .status(500)
@@ -320,19 +330,31 @@ router.post("/:id/rejected", async (req, res) => {
 
     let backStepNumber = currentStep?.step_number_rejected || FINISHED_STEP_ID;
     let backStepStatus = currentStep?.status_id_rejected;
-
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        current_route_step_id: backStepNumber,
-        status_id: backStepStatus,
-      },
-    });
-    res.json({ message: "Заявка отклонена на следующий шаг" });
+    console.log(backStepNumber)
+    if(backStepNumber == 0 || backStepNumber === null){
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          current_route_step_id: FINISHED_STEP_ID,
+          status_id: backStepStatus,
+        },
+      });
+    }else{
+      let stepId = order.route.steps.find(step => step.step_number === backStepNumber)
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          current_route_step_id: stepId?.id,
+          status_id: backStepStatus,
+        },
+      });
+    }
+    
+    res.json({ message: "Заявка отклонена на предыдущий шаг" });
   } catch (error) {
     res
       .status(500)
-      .json({ error: "Не удалось перенести заявку на следующий шаг" });
+      .json({ error: `Не удалось отклонить заявку: ${error}` });
   }
 });
 
@@ -353,7 +375,7 @@ router.post("/:id/reset", async (req, res) => {
     await prisma.order.update({
       where: { id: order.id },
       data: {
-        current_route_step_id: undefined,
+        current_route_step_id: null,
         route_id: undefined,
       },
     });

@@ -93,7 +93,7 @@ router.delete('/:id', async (req, res) => {
 // POST: Внесение денежных средств
 router.post('/:id/deposit', async (req: AuthRequest, res) => {
   const { id } = req.params;
-  const { amount } = req.body;
+  const { cash_summ } = req.body;
   const user = req.user;  
 
 
@@ -101,7 +101,7 @@ router.post('/:id/deposit', async (req: AuthRequest, res) => {
     const cash = await prisma.cash.update({
       where: { id: Number(id) },
       data: {
-        cash_summ: { increment: amount }, // Увеличение суммы в кассе
+        cash_summ: { increment: cash_summ }, // Увеличение суммы в кассе
       },
     });
 
@@ -109,43 +109,59 @@ router.post('/:id/deposit', async (req: AuthRequest, res) => {
       data: {
         cash_id: cash.id,
         user_id: user?.userId as number,
-        action: `Внесение денег: ${amount}`,
+        action: `Внесение денег: ${cash_summ}`,
       },
     });
 
     res.json(cash);
   } catch (error) {
-    res.status(500).json({ error: 'Не удалось внести средства в кассу' });
+    res.status(500).json({ error: `Не удалось внести средства в кассу ${error}` });
   }
 });
 
 // POST: Выдача денежных средств
 router.post('/:id/withdraw', async (req: AuthRequest, res) => {
   const { id } = req.params;
-  const { amount } = req.body;
+  const { cash_summ } = req.body;
   const user = req.user;  
 
-
   try {
-    const cash = await prisma.cash.update({
+    // Находим текущую запись cash
+    const cash = await prisma.cash.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!cash) {
+      return res.status(404).json({ error: 'Касса не найдена' });
+    }
+
+    // Проверяем, не станет ли сумма отрицательной
+    if (cash.cash_summ < cash_summ) {
+      return res.status(400).json({ error: 'Недостаточно средств в кассе' });
+    }
+
+    // Выполняем обновление суммы в кассе
+    const updatedCash = await prisma.cash.update({
       where: { id: Number(id) },
       data: {
-        cash_summ: { decrement: amount }, // Уменьшение суммы в кассе
+        cash_summ: { decrement: cash_summ },
       },
     });
 
+    // Логируем операцию
     await prisma.cashLog.create({
       data: {
-        cash_id: cash.id,
+        cash_id: updatedCash.id,
         user_id: user?.userId as number,
-        action: `Выдача денег: ${amount}`,
+        action: `Выдача денег: ${cash_summ}`,
       },
     });
 
-    res.json(cash);
+    res.json(updatedCash);
   } catch (error) {
     res.status(500).json({ error: 'Не удалось выдать средства из кассы' });
   }
 });
+
 
 export default router;
