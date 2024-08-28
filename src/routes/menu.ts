@@ -13,7 +13,6 @@ router.get('/', async (req:AuthRequest, res) => {
 
   try {
     const userRoleId = user?.roleId;
-    console.log(userRoleId)
     if (!userRoleId) {
       return res.status(403).json({ error: 'Не удалось определить роль пользователя' });
     }
