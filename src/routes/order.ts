@@ -230,7 +230,6 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Proceed to the next step in the route
 router.post("/:id/agreed", async (req, res) => {
   const { id } = req.params;
 
@@ -242,71 +241,75 @@ router.post("/:id/agreed", async (req, res) => {
     });
 
     if (!order) {
-      return res.status(404).json({ error: "Зявка не найдена" });
+      return res.status(404).json({ error: "Заявка не найдена" });
     }
-
-    // if (order.current_route_step_id === FINISHED_STEP_ID) {
-    //   return res
-    //     .status(500)
-    //     .json({ error: "Заявка была завершена, не возможно ее согласовать !" });
-    // }
 
     const currentStep = order.route.steps.find(
       (step) => step.id === order.current_route_step_id
     );
+    let message = '';
+
     if (currentStep === null || currentStep === undefined) {
       let initialStepId: number | undefined;
-
       const minNumber = findMinValue(order.route.steps, "step_number");
       const initialStep = order.route.steps.find(step => step.step_number === minNumber);
       if (initialStep) {
-        initialStepId = initialStep.id;  // Устанавливаем id шага
+        initialStepId = initialStep.id;
       }
       updateOrder = await prisma.order.update({
         where: { id: order.id },
         data: {
           current_route_step_id: initialStepId,
-          status_id:1,
+          status_id: 1,
         },
-        include:{employee:true,status:true,images:true,route:true}
+        include: { employee: true, status: true, images: true, route: true }
       });
+      message = `Заявка перешела к первому шагу`;
     } else {
       let nextStepNumber = currentStep?.step_number_agreed;
       let nextStepStatus = currentStep?.status_id_agreed;
-      if(nextStepNumber == 0 || nextStepNumber === null){
-        updateOrder =  await prisma.order.update({
+      if (nextStepNumber == 0 || nextStepNumber === null) {
+        updateOrder = await prisma.order.update({
           where: { id: order.id },
           data: {
             current_route_step_id: FINISHED_STEP_ID,
             status_id: nextStepStatus,
           },
-          include:{employee:true,status:true,images:true,route:true}
+          include: { employee: true, status: true, images: true, route: true }
         });
-      }else{
-        let stepId = order.route.steps.find(step => step.step_number === nextStepNumber)
-
+        message = `Заявка завершена`;
+      } else {
+        let stepId = order.route.steps.find(step => step.step_number === nextStepNumber);
         updateOrder = await prisma.order.update({
           where: { id: order.id },
           data: {
             current_route_step_id: stepId?.id,
             status_id: nextStepStatus,
           },
-          include:{employee:true,status:true,images:true,route:true}
+          include: { employee: true, status: true, images: true, route: true }
         });
+        message = `Заявка перешела к следующему шагу: ${nextStepNumber}`;
       }
     }
-    console.log(updateOrder)
+
+    // Record approval history
+    await prisma.approvalHistory.create({
+      data: {
+        order_id: order.id,
+        message: message,
+      }
+    });
+
     res.json(updateOrder);
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: `Не удалось перенести заявку на следующий шаг: ${error}` });
+    res.status(500).json({ error: `Не удалось перенести заявку на следующий шаг: ${error}` });
   }
 });
 
 // Proceed to the back step in the route
 router.post("/:id/rejected", async (req, res) => {
   const { id } = req.params;
+  const {messageB} = req.body
 
   try {
     const order = await prisma.order.findUnique({
@@ -315,23 +318,22 @@ router.post("/:id/rejected", async (req, res) => {
     });
 
     if (!order) {
-      return res.status(404).json({ error: "Зявка не найдена" });
+      return res.status(404).json({ error: "Заявка не найдена" });
     }
 
     if (order.current_route_step_id === FINISHED_STEP_ID) {
-      return res
-        .status(500)
-        .json({ error: "Заявка была завершена, не возможно ее отклонить !" });
+      return res.status(500).json({ error: "Заявка была завершена, невозможно ее отклонить !" });
     }
-    // const currentStep = order.route.steps.find(step => step.step_number === order.status_id);
+
     const currentStep = order.route.steps.find(
       (step) => step.id === order.current_route_step_id
     );
 
     let backStepNumber = currentStep?.step_number_rejected || FINISHED_STEP_ID;
     let backStepStatus = currentStep?.status_id_rejected;
-    console.log(backStepNumber)
-    if(backStepNumber == 0 || backStepNumber === null){
+    let message = '';
+
+    if (backStepNumber == 0 || backStepNumber === null) {
       await prisma.order.update({
         where: { id: order.id },
         data: {
@@ -339,8 +341,9 @@ router.post("/:id/rejected", async (req, res) => {
           status_id: backStepStatus,
         },
       });
-    }else{
-      let stepId = order.route.steps.find(step => step.step_number === backStepNumber)
+      message = `Заявка отклонена и завершена`;
+    } else {
+      let stepId = order.route.steps.find(step => step.step_number === backStepNumber);
       await prisma.order.update({
         where: { id: order.id },
         data: {
@@ -348,17 +351,24 @@ router.post("/:id/rejected", async (req, res) => {
           status_id: backStepStatus,
         },
       });
+      message = `Заявка отклонена и перешла на следующий шаг: ${backStepNumber} по причине: ${messageB}`;
     }
-    
-    res.json({ message: "Заявка отклонена на предыдущий шаг" });
+
+    // Record rejection history
+    await prisma.approvalHistory.create({
+      data: {
+        order_id: order.id,
+        message: message,
+      }
+    });
+
+    res.json({ message: `Заявка отклонена на предыдущий шаг с причиной: ${messageB}` });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: `Не удалось отклонить заявку: ${error}` });
+    res.status(500).json({ error: `Не удалось отклонить заявку: ${error}` });
   }
 });
 
-// Proceed to the reset the route
+// Proceed to reset the route
 router.post("/:id/reset", async (req, res) => {
   const { id } = req.params;
 
@@ -369,7 +379,7 @@ router.post("/:id/reset", async (req, res) => {
     });
 
     if (!order) {
-      return res.status(404).json({ error: "Зявка не найдена" });
+      return res.status(404).json({ error: "Заявка не найдена" });
     }
 
     await prisma.order.update({
@@ -379,6 +389,15 @@ router.post("/:id/reset", async (req, res) => {
         route_id: undefined,
       },
     });
+
+    // Record reset history
+    await prisma.approvalHistory.create({
+      data: {
+        order_id: order.id,
+        message: 'Заявка сброшена',
+      }
+    });
+
     res.json({ message: "Заявка сброшена" });
   } catch (error) {
     res.status(500).json({ error: "Не удалось сбросить заявку" });
