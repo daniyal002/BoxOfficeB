@@ -11,6 +11,7 @@ import statusRoutes from './routes/status';
 import routeRoutes from './routes/route';
 import cashRoutes from './routes/cash';
 import menuRoutes from './routes/menu';
+import approvalHistoryRoutes from './routes/approvalHistory';
 import { authMiddleware } from './authMiddleware';
 import path from 'path';
 import cors from 'cors'
@@ -30,6 +31,7 @@ app.use('/statuses',authMiddleware, statusRoutes);
 app.use('/routes',authMiddleware, routeRoutes);
 app.use('/cashes',authMiddleware, cashRoutes);
 app.use('/menu',authMiddleware, menuRoutes);
+app.use('/history',authMiddleware, approvalHistoryRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 

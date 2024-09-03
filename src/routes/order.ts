@@ -127,7 +127,7 @@ router.get("/:id?", async (req, res) => {
 
 // Create a new order
 router.post("/", async (req: AuthRequest, res) => {
-  const { employee_id, order_description, order_summ, route_id, order_note } = req.body;
+  const { order_description, order_summ, route_id, order_note } = req.body;
   const user = req.user;
 
   try {
@@ -149,14 +149,21 @@ router.post("/", async (req: AuthRequest, res) => {
       }
     }
 
+    const employee = await prisma.user.findUnique({
+      where:{id: Number(user?.userId)}
+    })
+    const status = await prisma.status.findFirst({
+      where:{orderStatus: "PENDING"}
+    })
+
     const order = await prisma.order.create({
       data: {
-        employee_id,
+        employee_id:employee?.employee_id as number,
         user_id: user?.userId as number,
         order_description,
         order_summ: parseFloat(order_summ),  // Убедитесь, что значение передается как число
         route_id,
-        status_id: 1, // Initial status
+        status_id: status?.id as number, // Initial status
         order_note,
         current_route_step_id: initialStepId, // Устанавливаем, если шаг найден
       },
@@ -171,7 +178,7 @@ router.post("/", async (req: AuthRequest, res) => {
 
 // Update order
 router.put("/:id", async (req: AuthRequest, res) => {
-  const { employee_id, order_description, order_summ, order_note } = req.body;
+  const { order_description, order_summ, order_note } = req.body;
   const { id } = req.params;
   const user = req.user;
 
@@ -179,7 +186,6 @@ router.put("/:id", async (req: AuthRequest, res) => {
     const order = await prisma.order.update({
       where: { id: Number(id) },
       data: {
-        employee_id,
         user_id: user?.userId as number,
         order_description,
         order_summ: parseFloat(order_summ),

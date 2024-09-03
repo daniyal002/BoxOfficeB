@@ -38,12 +38,13 @@ router.get('/:id', async (req, res) => {
 
 // POST: Создать новый статус
 router.post('/', async (req, res) => {
-  const { status_name } = req.body;
+  const { status_name,orderStatus } = req.body;
 
   try {
     const newStatus = await prisma.status.create({
       data: {
         status_name,
+        orderStatus
       },
     });
 
@@ -56,13 +57,14 @@ router.post('/', async (req, res) => {
 // PUT: Обновить информацию о статусе по ID
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { status_name } = req.body;
+  const { status_name,orderStatus } = req.body;
 
   try {
     const updatedStatus = await prisma.status.update({
       where: { id: Number(id) },
       data: {
         status_name,
+        orderStatus
       },
     });
 
