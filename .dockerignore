@@ -1,0 +1,10 @@
+# Игнорируем node_modules
+node_modules
+npm-debug.log
+
+# Игнорируем файлы и папки, которые не нужны в контейнере
+dist
+build
+*.log
+*.git
+uploads

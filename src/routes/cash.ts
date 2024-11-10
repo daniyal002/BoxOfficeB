@@ -94,7 +94,7 @@ router.delete('/:id', async (req, res) => {
 router.post('/:id/deposit', async (req: AuthRequest, res) => {
   const { id } = req.params;
   const { cash_summ } = req.body;
-  const user = req.user;  
+  const user = req.user;
 
 
   try {
@@ -115,7 +115,7 @@ router.post('/:id/deposit', async (req: AuthRequest, res) => {
 
     res.json(cash);
   } catch (error) {
-    res.status(500).json({ error: `Не удалось внести средства в кассу ${error}` });
+    res.status(500).json({ error: `Не удалось внести средства в кассу` });
   }
 });
 
@@ -123,7 +123,7 @@ router.post('/:id/deposit', async (req: AuthRequest, res) => {
 router.post('/:id/withdraw', async (req: AuthRequest, res) => {
   const { id } = req.params;
   const { cash_summ } = req.body;
-  const user = req.user;  
+  const user = req.user;
 
   try {
     // Находим текущую запись cash

@@ -59,7 +59,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json(newRoute);
   } catch (error) {
-    res.status(500).json({ error: `Не удалось создать маршрут: ${error}`, });
+    res.status(500).json({ error: `Не удалось создать маршрут`, });
   }
 });
 
@@ -89,7 +89,7 @@ router.put('/:id', async (req, res) => {
 
     res.json(updatedRoute);
   } catch (error) {
-    res.status(500).json({ error: `Не удалось обновить маршрут ${error}` });
+    res.status(500).json({ error: `Не удалось обновить маршрут` });
   }
 });
 
@@ -110,7 +110,6 @@ router.delete('/:id', async (req, res) => {
 
     res.status(204).end();
   } catch (error) {
-    console.error('Ошибка при удалении маршрута:', error);
     res.status(500).json({ error: 'Не удалось удалить маршрут' });
   }
 });

@@ -94,7 +94,7 @@ router.get("/approval", async (req: AuthRequest, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ error: `Ошибка при получении заявки ${error} route` });
+      .json({ error: `Ошибка при получении заявки` });
   }
 });
 
@@ -123,7 +123,7 @@ router.get("/:id?", async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ error: `Ошибка при получении заявки ${error} route` });
+      .json({ error: `Ошибка при получении заявки` });
   }
 });
 
@@ -176,7 +176,7 @@ router.post("/", async (req: AuthRequest, res) => {
 
     res.json(order);
   } catch (error) {
-    res.status(500).json({ error: `Ошибка при создании заявки: ${error}` });
+    res.status(500).json({ error: `Ошибка при создании заявки` });
   }
 });
 
@@ -355,7 +355,7 @@ router.post("/:id/agreed", async (req: AuthRequest, res) => {
     res
       .status(500)
       .json({
-        error: `Не удалось перенести заявку на следующий шаг: ${error}`,
+        error: `Не удалось перенести заявку на следующий шаг`,
       });
   }
 });
@@ -440,7 +440,7 @@ router.post("/:id/rejected", async (req: AuthRequest, res) => {
       message: `Заявка отклонена на предыдущий шаг с причиной: ${messageB}`,
     });
   } catch (error) {
-    res.status(500).json({ error: `Не удалось отклонить заявку: ${error}` });
+    res.status(500).json({ error: `Не удалось отклонить заявку` });
   }
 });
 
@@ -481,7 +481,7 @@ router.post("/:id/reset", async (req, res) => {
 
     res.json({ message: "Заявка сброшена" });
   } catch (error) {
-    res.status(500).json({ error: "Не удалось сбросить заявку" + error });
+    res.status(500).json({ error: "Не удалось сбросить заявку"});
   }
 });
 
