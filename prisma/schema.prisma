@@ -170,6 +170,7 @@ enum OrderStatus {
   PENDING
   APPROVED
   REJECTED
+  WITHDRAW
 }
 
 model Status {

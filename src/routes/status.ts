@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
     });
     res.json(statuses);
   } catch (error) {
-    res.status(500).json({ error: 'Не удалось получить статусы' });
+    res.status(500).json({ error: 'Не удалось получить статусы' + error });
   }
 });
 
