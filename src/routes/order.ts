@@ -236,6 +236,12 @@ router.delete("/:id", async (req, res) => {
     if (!order) {
       return res.status(404).json({ error: "Заказ не найден" });
     }
+    const WITHDRAWStatus = await prisma.status.findFirst({
+      where: { orderStatus: "WITHDRAW" }, // или любое другое значение по умолчанию
+    });
+    if (order.status_id === WITHDRAWStatus?.id ) {
+      return res.status(403).json({ error: "Нет доступа к удалению заявки" });
+    }
     // Сначала удаляем связанные изображения
     if (order?.images?.length > 0) {
       for (const image of order.images) {
@@ -275,6 +281,7 @@ router.post("/:id/agreed", async (req: AuthRequest, res) => {
       return res.status(404).json({ error: "Заявка не найдена" });
     }
 
+
     const employee = await prisma.user.findUnique({
       where: { id: Number(user?.userId) },
       include: { employee: true },
@@ -282,9 +289,16 @@ router.post("/:id/agreed", async (req: AuthRequest, res) => {
     const currentStep = order.route.steps.find(
       (step) => step.id === order.current_route_step_id
     );
-    if (currentStep?.employee_id !== employee?.employee_id) {
-      return res.status(403).json({ error: "Нет доступа к этой заявке" });
+    if (currentStep !== null && currentStep !== undefined) {
+      if (currentStep?.employee_id !== employee?.employee_id) {
+        return res.status(403).json({ error: "Нет доступа к этой заявке" });
+      }
+    }else{
+      if (employee?.employee_id !== employee?.employee_id) {
+        return res.status(403).json({ error: "Нет доступа к этой заявке" });
+      }
     }
+
     let message = "";
 
     if (currentStep === null || currentStep === undefined) {
