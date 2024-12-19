@@ -1,9 +1,9 @@
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs'
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 // Настраиваем хранилище для загруженных файлов
-const uploadDir = 'uploads/';
+const uploadDir = "uploads/";
 
 // Проверяем, существует ли папка uploads
 if (!fs.existsSync(uploadDir)) {
@@ -16,26 +16,20 @@ const storage = multer.diskStorage({
     cb(null, uploadDir); // Папка для сохранения файлов
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`);
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+
+    // Корректное кодирование кириллицы и других символов
+    const originalName = file.originalname.replace(/\s+/g, "_"); // Убираем пробелы
+    const sanitizedOriginalName = path.basename(originalName, path.extname(originalName)); // Имя без расширения
+    const encodedName = Buffer.from(sanitizedOriginalName, "latin1").toString("utf8"); // Поддержка кириллицы
+    cb(null, `${encodedName}-${uniqueSuffix}${path.extname(file.originalname)}`);
   },
 });
 
-// Ограничиваем размер файла до 5MB и принимаем только изображения
+// Устанавливаем ограничение только на размер файла (10MB) и количество файлов (10)
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = filetypes.test(file.mimetype);
-
-    if (extname && mimetype) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Загрузите изображения формата JPEG или PNG'));
-    }
-  },
+  limits: { fileSize: 10 * 1024 * 1024, files: 10 }, // Ограничиваем размер файла и количество файлов
 });
 
 export default upload;

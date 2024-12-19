@@ -422,7 +422,7 @@ router.post("/:id/rejected", async (req: AuthRequest, res) => {
           status_id: backStepStatus,
         },
       });
-      message = `Заявка отклонена и завершена`;
+      message = `Заявка отклонена сотрудником ${employee?.employee.employee_name} и завершена по причине: ${messageB}`;
     } else {
       let stepId = order.route.steps.find(
         (step) => step.step_number === backStepNumber
@@ -531,11 +531,11 @@ router.post(
       res
         .status(201)
         .json({
-          message: "Фотографии успешно загружены",
+          message: "Файлы успешно загружены",
           count: newImages.count,
         });
     } catch (error) {
-      res.status(500).json({ error: "Ошибка при добавлении фотографий" });
+      res.status(500).json({ error: "Ошибка при добавлении файлов" });
     }
   }
 );
@@ -587,11 +587,11 @@ router.put(
       res
         .status(201)
         .json({
-          message: "Фотографии успешно обновлены",
+          message: "Файлы успешно обновлены",
           count: newImages.count,
         });
     } catch (error) {
-      res.status(500).json({ error: "Ошибка при обновлении фотографий" });
+      res.status(500).json({ error: "Ошибка при обновлении файла" });
     }
   }
 );
